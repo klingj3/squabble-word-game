@@ -2,7 +2,7 @@
 name = "squabble-game"
 version = "0.1.0"
 description = "Command-line SQUABBLE — a familiar-seeming but legally distinct word game"
-readme = "README.md"
+readme = "README.pypi.md"
 license = { text = "MIT" }
 authors = [{ name = "John Klingelhofer", email = "jkklingelhofer@gmail.com" }]
 keywords = ["word game", "cli", "terminal", "board game"]
