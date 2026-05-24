@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..board import Board
 from ..rulebook import Rulebook
 from ..types import BoardState, Move
 
@@ -16,11 +17,7 @@ class Player:
         rulebook: Rulebook,
         name: str | None = None,
     ) -> None:
-        while name is None:
-            name = input("Enter the name for human {}: ".format(player_id))
-            if name.isspace():
-                print("Player names must contain non-space characters.")
-                name = None
+        assert name is not None, "name must be provided; HumanPlayer collects it interactively"
         self.name = name
         self.id = player_id
         self.score_hist: list[int] = []
@@ -32,11 +29,11 @@ class Player:
         """Return the player's display name."""
         return self.name
 
-    def get_move(self, board_state: BoardState, board: object | None = None) -> Move:
+    def get_move(self, board_state: BoardState, board: Board | None = None) -> Move:
         """Return the next move (subclasses implement interaction or search)."""
         raise NotImplementedError
 
-    def prompt_move(self, board_state: BoardState, board: object | None = None) -> Move:
+    def prompt_move(self, board_state: BoardState, board: Board | None = None) -> Move:
         """Obtain a move and remove spent tiles from the rack when applicable."""
 
         def remove_used_tiles(move: Move) -> None:

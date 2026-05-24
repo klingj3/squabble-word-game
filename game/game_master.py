@@ -51,9 +51,10 @@ class GameMaster:
         self.player_scores = [0 for _ in range(len(self.players))]
         self.presenter.reset()
 
-    def play_game(self, verbose: bool = False) -> None:
+    def play_game(self, verbose: bool = False, show_splash: bool = True) -> None:
         """Play until passes or a player goes out, then apply endgame adjustments."""
-        show_launch_splash()
+        if show_splash:
+            show_launch_splash()
         self.reset_game()
 
         consecutive_skips = 0
@@ -80,7 +81,7 @@ class GameMaster:
                     move = player.prompt_move(self.board.state, board=self.board)
                 except QuitGame:
                     if verbose:
-                        warn(f"[bold]{player.name}[/] ends the game.")
+                        warn(f"[bold]{player.name}[/] ends the game. (╯°□°）╯︵ ┻━┻")
                     raise
 
                 if move.coords == (-1, -1):

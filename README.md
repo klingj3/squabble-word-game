@@ -14,13 +14,13 @@ A familiar-seeming but legally distinct word game for the terminal: local hot-se
 From the repository root:
 
 ```bash
-uv sync --extra dev
+uv sync
 ```
 
 Or with pip:
 
 ```bash
-python3 -m pip install -e ".[dev]"
+python3 -m pip install -e .
 ```
 
 Copy `.env.example` to `.env` if you need to override where data files live (see **Data files** below).
@@ -64,12 +64,19 @@ Type checking targets the `game` package and `tests` with strict defaults (`pypr
 
 ## Layout
 
-- `game/board.py` — board state and rendering
+- `game/cli.py` — entry point and argument parsing
+- `game/board.py` — board state
 - `game/rulebook.py` — dictionary, scoring, validation
 - `game/tile_bag.py` — tile pool
 - `game/game_master.py` — turn loop and scoring
 - `game/players/` — human and computer players
+- `game/ui/` — rendering, panels, and display logic (includes deliberate animation delays for readability)
 - `game/paths.py` — `DATA_ROOT` / `data_path()`
+- `game/types.py` — shared type definitions
 - `tests/` — pytest suite
 
-The evaluation notebook under `jupyter_notebooks/` sets `DATA_ROOT` from the working directory; optional extras such as matplotlib/pandas are not part of the core package.
+The AI move search is fast enough that two computer players can complete multiple full games per second when run without the UI layer.
+
+## Credits
+
+- Word definitions sourced via the [Free Dictionary API](https://github.com/meetDeveloper/freeDictionaryAPI)

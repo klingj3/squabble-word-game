@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, NamedTuple
 
+from .. import Board
 from ..rulebook import Rulebook
 from ..types import BoardState, Move
 from .base import Player
@@ -217,14 +218,7 @@ class ComputerPlayer(Player):
 
         return valid_move_params
 
-    def get_move(
-        self,
-        board_state: BoardState,
-        board: Board | None = None,
-        *,
-        scores: list[tuple[str, int]] | None = None,
-        turn: int | None = None,
-    ) -> Move:
+    def get_move(self, board_state: BoardState, board: Board | None = None) -> Move:
         """Choose the highest-scoring valid move or pass when none score positively."""
         valid_locations = self.get_valid_locations(board_state)
 

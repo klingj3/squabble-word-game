@@ -14,9 +14,11 @@ from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
+from .board_renderer import render_board
 from .console import console
 from .highlight import Highlight
 from .panels import legend
+from .styles import SCORE_HIGHLIGHT_STYLE, SCORE_STYLE, SCORE_WINNER_STYLE
 
 if TYPE_CHECKING:
     from ..board import Board
@@ -103,7 +105,7 @@ class GamePresenter:
     def print_final_board(self, board: Board, players: Sequence[_NamedPlayer], scores: Sequence[int]) -> None:
         """Print the end-of-game rule, board, and final scores."""
         console.print(Rule("[bold bright_magenta]Final board[/]", style="bright_magenta"))
-        console.print(board)
+        console.print(render_board(board))
         console.print(self._score_sheet(players, scores, final=True))
 
     def animate_computer_move(
@@ -124,7 +126,7 @@ class GamePresenter:
 
         y, x = move.coords
         is_d = move.dir == "D"
-        board.highlight = Highlight(
+        hl = Highlight(
             row=y if not is_d else None,
             col=x if is_d else None,
         )
@@ -132,43 +134,40 @@ class GamePresenter:
         def frame(running_scores: Sequence[int], highlight_idx: int | None) -> RenderableType:
             return Group(
                 self._sidebar(players, running_scores, highlight_index=highlight_idx),
-                board,
+                render_board(board, hl),
             )
 
         running_scores = list(scores)
 
         console.clear()
-        try:
-            with Live(
-                frame(running_scores, None),
-                console=console,
-                auto_refresh=False,
-                transient=False,
-            ) as live:
-                time.sleep(0.2)
+        with Live(
+            frame(running_scores, None),
+            console=console,
+            auto_refresh=False,
+            transient=False,
+        ) as live:
+            time.sleep(0.2)
 
-                for i, c in enumerate(move.word):
-                    cy, cx = (y + i, x) if is_d else (y, x + i)
-                    if board.state[cy][cx] == " ":
-                        row = board.state[cy]
-                        board.state[cy] = row[:cx] + c + row[cx + 1 :]
-                        live.update(frame(running_scores, None), refresh=True)
-                        time.sleep(tile_delay)
+            for i, c in enumerate(move.word):
+                cy, cx = (y + i, x) if is_d else (y, x + i)
+                if board.state[cy][cx] == " ":
+                    row = board.state[cy]
+                    board.state[cy] = row[:cx] + c + row[cx + 1 :]
+                    live.update(frame(running_scores, None), refresh=True)
+                    time.sleep(tile_delay)
 
-                if gained != 0:
-                    steps = max(8, min(abs(gained), 20))
-                    step_delay = score_duration / steps
-                    for s in range(1, steps + 1):
-                        running_scores[player_idx] = before + round(gained * s / steps)
-                        live.update(frame(running_scores, player_idx), refresh=True)
-                        time.sleep(step_delay)
+            if gained != 0:
+                steps = max(8, min(abs(gained), 20))
+                step_delay = score_duration / steps
+                for s in range(1, steps + 1):
+                    running_scores[player_idx] = before + round(gained * s / steps)
+                    live.update(frame(running_scores, player_idx), refresh=True)
+                    time.sleep(step_delay)
 
-                running_scores[player_idx] = after
-                live.update(frame(running_scores, player_idx), refresh=True)
-                time.sleep(hold_after)
-                live.update(frame(running_scores, None), refresh=True)
-        finally:
-            board.highlight = None
+            running_scores[player_idx] = after
+            live.update(frame(running_scores, player_idx), refresh=True)
+            time.sleep(hold_after)
+            live.update(frame(running_scores, None), refresh=True)
 
         scores[player_idx] = after
 
@@ -218,11 +217,11 @@ class GamePresenter:
         for rank, (i, player) in enumerate(ranked, start=1):
             marker = "★" if final and rank == 1 else str(rank)
             if final and rank == 1:
-                score_style = "bold bright_yellow"
+                score_style = SCORE_WINNER_STYLE
             elif i == highlight_index:
-                score_style = "bold reverse bright_yellow"
+                score_style = SCORE_HIGHLIGHT_STYLE
             else:
-                score_style = "bold bright_green"
+                score_style = SCORE_STYLE
             table.add_row(
                 marker,
                 player.name,

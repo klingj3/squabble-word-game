@@ -30,7 +30,8 @@ class TileBag:
 
     def grab(self, num_tiles: int) -> list[str]:
         """Shuffle the bag, then take up to num_tiles from the front."""
-        random.shuffle(self.bag)
+        random.shuffle(self.bag)  # This shuffle is redundant from a pure programming perspective,
+        # but it who takes tiles out of the bag without shaking the bag around first just-in-case? :)
         new_tiles, self.bag = self.bag[:num_tiles], self.bag[num_tiles:]
         return new_tiles
 

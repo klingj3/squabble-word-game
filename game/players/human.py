@@ -14,20 +14,10 @@ from rich.text import Text
 
 from ..board import Board
 from ..exceptions import InvalidPlacementError, QuitGame
-from ..rulebook import Rulebook
+from ..rulebook import INVALID_PLACEMENT, INVALID_WORD, Rulebook
 from ..types import BoardState, Move
-from ..ui import console, parse_input_highlight, rack_panel, warn
+from ..ui import HELP_LINES, console, help_panel, parse_input_highlight, rack_panel, render_board, warn
 from .base import Player
-
-
-_HELP_LINES = (
-    "quit                    leave the game",
-    "skip                    pass the turn",
-    "shuffle                 randomize the order of your rack",
-    "exchange <LETTERS>      trade tiles for new ones",
-    "define <WORD>           look up a definition",
-    "<x> <y> <R|D> <WORD>    play a word  (e.g. 7 7 R PYTHON)",
-)
 
 
 class HumanPlayer(Player):
@@ -40,10 +30,19 @@ class HumanPlayer(Player):
         rulebook: Rulebook,
         name: str | None = None,
     ) -> None:
-        """If name is given, skip asking for it on stdin."""
+        """If name is given, skip asking for it on stdin; otherwise prompt with help panel."""
+        if name is None:
+            while True:
+                entered = Prompt.ask(
+                    f"[bold bright_green]Name for Player {player_id}[/]", console=console
+                )
+                if entered.strip():
+                    name = entered.strip()
+                    break
+                warn("Player names must contain non-space characters.")
         super().__init__(player_id, init_tiles, rulebook, name)
 
-    def get_move(self, board_state: BoardState, board: object | None = None) -> Move:
+    def get_move(self, board_state: BoardState, board: Board | None = None) -> Move:
         """Read stdin until a valid move; QuitGame means the player quit."""
         typed_board = board if isinstance(board, Board) else None
         if typed_board is not None and sys.stdin.isatty():
@@ -64,7 +63,7 @@ class HumanPlayer(Player):
                 return result
             if result == "shuffle":
                 continue
-            err = "\n".join(_HELP_LINES) if result == "help" else result
+            err = "\n".join(f"{cmd:<22} {desc}" for cmd, desc in HELP_LINES) if result == "help" else result
 
     def _tty_get_move(self, board: Board, board_state: BoardState) -> Move:
         """TTY path: one Rich Live session for typing, errors, and the board."""
@@ -73,15 +72,19 @@ class HumanPlayer(Player):
 
         def render() -> RenderableType:
             hl = parse_input_highlight(buf)
-            board.highlight = hl
             needed = [ch for r, c, ch in hl.path if board.state[r][c] == " "]
             used = _rack_used_indices(self.tiles, needed)
-            pieces: list[RenderableType] = [board, rack_panel(self.tiles, used)]
+            pieces: list[RenderableType] = [render_board(board, hl), rack_panel(self.tiles, used)]
             if message:
                 pieces.append(Panel(message, title="[bold bright_cyan]Message[/]",
                                     border_style="cyan", padding=(0, 1)))
-            pieces.append(Text.assemble(("Action: ", "bold bright_green"),
-                                        (buf, "bright_white")))
+            if buf:
+                pieces.append(Text.assemble(("Action: ", "bold bright_green"), (buf, "bright_white")))
+            else:
+                pieces.append(Text.assemble(
+                    ("Action: ", "bold bright_green"),
+                    ("type 'help' for a list of commands", "grey50"),
+                ))
             return Group(*pieces)
 
         keys = _keystrokes()
@@ -107,12 +110,11 @@ class HumanPlayer(Player):
                     if isinstance(result, Move):
                         return result
                     message = None if result == "shuffle" else (
-                        "\n".join(_HELP_LINES) if result == "help" else result
+                        "\n".join(f"{cmd:<22} {desc}" for cmd, desc in HELP_LINES) if result == "help" else result
                     )
                     live.update(render(), refresh=True)
         finally:
             keys.close()
-            board.highlight = None
 
     def _interpret(self, segments: list[str], board_state: BoardState) -> Move | str:
         """Parse tokens into a Move, the string "help", or an error message."""
@@ -145,6 +147,7 @@ class HumanPlayer(Player):
             move = Move((int(sy, 16), int(sx, 16)), direction, word.upper())
         except ValueError:
             return "Coordinates must be hex digits 0–d (e.g. 7, a, d)."
+        move = _extend_move(move, board_state)
         row, col = move.coords
         if not (0 <= row <= 14 and 0 <= col <= 14):
             return "Moves must be within the boundaries 0 and d (d being hexadecimal 14)."
@@ -153,9 +156,11 @@ class HumanPlayer(Player):
         try:
             if not self._tiles_present(move, board_state):
                 return "Your rack does not contain the tiles needed for this move."
-            if self.rulebook.score_move(move, board_state) < 0:
-                return ("This word, or an ancillary word formed, is invalid, or the word "
-                        "does not border an existing tile on the board.")
+            score = self.rulebook.score_move(move, board_state)
+            if score == INVALID_PLACEMENT:
+                return "Your word must connect to an existing tile (or the center square on the first move)."
+            if score == INVALID_WORD:
+                return "That word, or a word it forms on the board, isn't in the dictionary."
         except InvalidPlacementError as exc:
             return str(exc)
         return move
@@ -177,6 +182,33 @@ class HumanPlayer(Player):
                 except ValueError:
                     return False
         return True
+
+
+def _extend_move(move: Move, board_state: BoardState) -> Move:
+    """Prepend/append any already-placed tiles adjacent to the word along its axis."""
+    y, x = move.coords
+    dy, dx = (1, 0) if move.dir == "D" else (0, 1)
+
+    # Walk backward to collect tiles placed before the word's start.
+    prefix = ""
+    py, px = y - dy, x - dx
+    while 0 <= py <= 14 and 0 <= px <= 14 and board_state[py][px] != " ":
+        prefix = board_state[py][px] + prefix
+        py -= dy
+        px -= dx
+
+    # Walk forward from the word's end to collect tiles placed after it.
+    suffix = ""
+    ey = y + dy * len(move.word)
+    ex = x + dx * len(move.word)
+    while 0 <= ey <= 14 and 0 <= ex <= 14 and board_state[ey][ex] != " ":
+        suffix += board_state[ey][ex]
+        ey += dy
+        ex += dx
+
+    if not prefix and not suffix:
+        return move
+    return Move((y - dy * len(prefix), x - dx * len(prefix)), move.dir, prefix + move.word + suffix)
 
 
 def _rack_used_indices(rack: list[str], needed: list[str]) -> set[int]:

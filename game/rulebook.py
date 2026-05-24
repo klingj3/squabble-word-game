@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import urllib.error
+import urllib.request
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
@@ -14,6 +16,9 @@ from .types import BoardState, Move
 
 
 _TRIE_CHILDREN_KEY = "_C"
+
+INVALID_WORD = -1
+INVALID_PLACEMENT = -2
 
 
 def _annotate_trie_children(root: dict[str, Any]) -> None:
@@ -48,10 +53,10 @@ def _word_validity_checker(dictionary_root: dict[str, Any]) -> Callable[[str], b
 
 
 class Rulebook:
-    """Dictionary trie, English definitions, board bonuses, and move scoring."""
+    """Dictionary trie, board bonuses, and move scoring."""
 
     def __init__(self) -> None:
-        """Load tile scores, dictionary tree, and English lookup data."""
+        """Load tile scores and dictionary tree."""
         self.board_special_tiles: list[str] = [
             "W  l   W   l  W",
             " w   L   L   w ",
@@ -76,22 +81,36 @@ class Rulebook:
         self.dictionary_root: dict[str, Any] = self.generate_dictionary_tree()
         _annotate_trie_children(self.dictionary_root)
         self._check_word: Callable[[str], bool] = _word_validity_checker(self.dictionary_root)
-        with open(data_path("english_dictionary.json"), encoding="utf-8") as infile:
-            self.english_dictionary: dict[str, str] = json.loads(infile.read())
 
     def calculate_penalty(self, tiles: list[str]) -> int:
         """Sum face values of unplayed tiles (endgame penalty)."""
         return sum(self.tile_scores[tile] for tile in tiles)
 
     def define(self, word: str) -> str:
-        """Definition text, or a short reason lookup failed."""
+        """Fetch a live definition from the Free Dictionary API and format it."""
         word = word.upper()
         if not self.word_is_valid(word):
-            return f"Word {word} does not appear in this game's list of scrabble words"
-        definition = self.english_dictionary.get(word)
-        if not definition:
-            return f"Word {word} is in our Scrabble dictionary, but not in the English dictionary!"
-        return f"{word}: {definition}"
+            return f"[yellow]{word}[/] is not in the Squabble word list."
+        url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word.lower()}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read())
+            meaning = data[0]["meanings"][0]
+            defn = meaning["definitions"][0]
+            pos = meaning.get("partOfSpeech", "")
+            header = f"[bold]{word}[/]" + (f"  [dim]{pos}[/]" if pos else "")
+            lines = [header, defn["definition"]]
+            if ex := defn.get("example"):
+                lines.append(f'[dim]"{ex}"[/]')
+            syns = defn.get("synonyms") or meaning.get("synonyms") or []
+            if syns:
+                lines.append("[dim]Synonyms:[/] " + ", ".join(syns[:6]))
+            return "\n".join(lines)
+        except urllib.error.HTTPError:
+            return f"No definition found for [bold]{word}[/]."
+        except Exception:
+            return "Could not reach the dictionary server — you need to be online for definitions."
 
     @staticmethod
     def generate_dictionary_tree(dict_path: str | Path | None = None) -> dict[str, Any]:
@@ -119,7 +138,7 @@ class Rulebook:
         return dictionary_tree
 
     def score_move(self, move: Move, board_state: BoardState, allow_illegal: bool = False) -> int:
-        """Score the main word and cross-words, or return -1 if the placement is illegal."""
+        """Score the main word and cross-words; -1 if a word is invalid, -2 if placement doesn't connect."""
 
         def neighbor_x(y: int, x: int) -> bool:
             """True if (y, x) has a horizontal neighbor letter on the board."""
@@ -140,7 +159,7 @@ class Rulebook:
         if allow_illegal or self.word_is_valid(move.word):
             total_score = self.score_word(y, x, move.dir, move.word, board_state)
         else:
-            return -1
+            return INVALID_WORD
 
         is_d, is_r = int(move.dir == "D"), int(move.dir == "R")
 
@@ -166,7 +185,7 @@ class Rulebook:
                     if allow_illegal or self.word_is_valid(anc_word):
                         total_score += self.score_word(y + i, word_start, "R", anc_word, board_state)
                     else:
-                        return -1
+                        return INVALID_WORD
             elif move.dir == "R" and neighbor_y(y, x + i):
                 valid_position = True
                 if board_state[y][x + i] == " ":
@@ -185,10 +204,10 @@ class Rulebook:
                     if allow_illegal or self.word_is_valid(anc_word):
                         total_score += self.score_word(word_start, x + i, "D", anc_word, board_state)
                     else:
-                        return -1
+                        return INVALID_WORD
 
         if not valid_position and not allow_illegal:
-            return -1
+            return INVALID_PLACEMENT
         return total_score
 
     def score_word(self, y: int, x: int, direction: str, word: str, board_state: BoardState) -> int:

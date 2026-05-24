@@ -14,9 +14,25 @@ from rich.text import Text
 
 from ..paths import data_path
 from .console import console
-from .styles import BONUS_STYLES, TILE_STYLE
+from .styles import (
+    BONUS_STYLES,
+    DIM_TILE_STYLE,
+    TILE_SCORE_STYLE,
+    TILE_STYLE,
+    USED_TILE_SCORE_STYLE,
+    USED_TILE_STYLE,
+)
 
 _TILE_SCORES: dict[str, int] = json.loads(data_path("tile_scores.json").read_text())
+
+HELP_LINES: tuple[str, ...] = (
+    ("quit", "leave the game"),
+    ("skip", "pass the turn"),
+    ("shuffle", "randomize your rack"),
+    ("exchange <LETTERS>", "trade tiles for new ones"),
+    ("define <WORD>", "look up a definition"),
+    ("<x> <y> <R|D> <WORD>", "play a word  (e.g. 7 7 R PYTHON)"),
+)
 
 _SQUABBLE_LETTERS: tuple[str, ...] = tuple("SQUABBLE")
 _SPLASH_BORDERS: tuple[str, ...] = (
@@ -34,7 +50,7 @@ def _squabble_tile_word(visible: int) -> Text:
     n = max(0, min(visible, len(_SQUABBLE_LETTERS)))
     parts: list[Text | str] = []
     for i, ch in enumerate(_SQUABBLE_LETTERS):
-        style = TILE_STYLE if i < n else "grey35 on grey19"
+        style = TILE_STYLE if i < n else DIM_TILE_STYLE
         parts.append(Text(f" {ch} ", style=style))
         if i < len(_SQUABBLE_LETTERS) - 1:
             parts.append(Text(" "))
@@ -90,6 +106,16 @@ def show_launch_splash(
         time.sleep(hold_final)
     console.clear()
 
+def help_panel() -> Panel:
+    """Panel listing every in-game command; shown on the name-entry screen and on 'help'."""
+    table = Table.grid(padding=(0, 3))
+    table.add_column(style="bold bright_cyan", no_wrap=True)
+    table.add_column(style="grey70")
+    for cmd, desc in HELP_LINES:
+        table.add_row(cmd, desc)
+    return Panel(table, title="[bold bright_cyan]How to play[/]", border_style="cyan", padding=(0, 1))
+
+
 def goodbye_banner() -> Panel:
     """Panel shown when a player quits."""
     body = Align.center(Text("Thanks for playing!", style="bold bright_cyan"))
@@ -122,12 +148,12 @@ def rack_panel(tiles: list[str], used_indices: set[int] | None = None) -> Panel:
             is_used = bool(used_indices and i in used_indices)
             letter_cells.append(Text(
                 f" {t.upper() if t != '?' else '?'} ",
-                style="bold grey35 on grey19" if is_used else TILE_STYLE,
+                style=USED_TILE_STYLE if is_used else TILE_STYLE,
             ))
             score = _TILE_SCORES.get(t.upper(), 0)
             score_cells.append(Text(
                 f" {score} ",
-                style="grey35" if is_used else "grey70",
+                style=USED_TILE_SCORE_STYLE if is_used else TILE_SCORE_STYLE,
             ))
         grid.add_row(*letter_cells)
         grid.add_row(*score_cells)

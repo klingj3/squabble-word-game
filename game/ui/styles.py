@@ -28,6 +28,25 @@ TILE_STYLE: str = "bold black on bright_yellow"
 # Style for tiles played from a blank (lowercase letters).
 BLANK_TILE_STYLE: str = "bold black on bright_white"
 
+# Board coordinate header styles.
+COORD_STYLE: str = "grey50"
+COORD_ACTIVE_STYLE: str = "bold bright_yellow underline"
+
+# Cell highlight styles used during move input.
+HIGHLIGHT_CELL_STYLE: str = "bold black on bright_green"
+HIGHLIGHT_LINE_STYLE: str = "bold bright_yellow"
+
+# Rack tile states: available, used (spent in the current preview), dim (not yet revealed).
+USED_TILE_STYLE: str = "bold grey35 on grey19"
+DIM_TILE_STYLE: str = "grey35 on grey19"
+TILE_SCORE_STYLE: str = "grey70"
+USED_TILE_SCORE_STYLE: str = "grey35"
+
+# Scoreboard score value styles.
+SCORE_STYLE: str = "bold bright_green"
+SCORE_WINNER_STYLE: str = "bold bright_yellow"
+SCORE_HIGHLIGHT_STYLE: str = "bold reverse bright_yellow"
+
 
 def tile_cell(char: str) -> Text:
     """Render a played tile letter with the standard tile background."""

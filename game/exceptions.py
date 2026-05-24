@@ -14,7 +14,7 @@ class InvalidCoordinatesError(Exception):
 
 
 class InvalidWordError(Exception):
-    """Raised when a word is not in the Scrabble dictionary."""
+    """Raised when a word is not in the dictionary."""
 
     def __init__(self, word: str, msg: str | None = None) -> None:
         """Store word; optional custom message."""

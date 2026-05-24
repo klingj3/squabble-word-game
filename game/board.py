@@ -1,12 +1,8 @@
-"""Scrabble board representation and move application."""
+"""Squabble board representation and move application."""
 
 from __future__ import annotations
 
-from rich.console import Console, ConsoleOptions, RenderResult
-from rich.text import Text
-
 from .types import BoardState, Move
-from .ui import BLANK_TILE_STYLE, BONUS_GLYPHS, BONUS_STYLES, TILE_STYLE, Highlight
 
 
 class Board:
@@ -32,57 +28,6 @@ class Board:
             "W  l   W   l  W",
         ]
         self.state: BoardState = ["".join([" " for _ in range(15)]) for _ in range(15)]
-        self.highlight: Highlight | None = None
-
-    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        """Yield Rich Text lines forming the coloured board grid."""
-        hl = self.highlight or Highlight()
-        path_chars: dict[tuple[int, int], str] = {
-            (r, c): ch for r, c, ch in hl.path
-        }
-
-        # Column header
-        header = Text("   ")
-        for c in range(15):
-            col_hex = format(c, "x")
-            if hl.col == c and hl.row is None:
-                header.append(f" {col_hex} ", style="bold bright_yellow underline")
-            else:
-                header.append(f" {col_hex} ", style="grey50")
-        yield header
-
-        for r in range(15):
-            row_hex = format(r, "x")
-            line = Text()
-            if hl.row == r and hl.col is None:
-                line.append(f"{row_hex}  ", style="bold bright_yellow underline")
-            else:
-                line.append(f"{row_hex}  ", style="grey50")
-
-            for c in range(15):
-                tile = self.state[r][c]
-                if (r, c) in path_chars:
-                    ch = path_chars[(r, c)]
-                    line.append(f" {ch.upper()} ", style="bold black on bright_green")
-                elif tile != " ":
-                    style = BLANK_TILE_STYLE if tile.islower() else TILE_STYLE
-                    line.append(f" {tile.upper()} ", style=style)
-                else:
-                    marker = self.special_tiles[r][c]
-                    if hl.col == c and hl.row == r:
-                        glyph = ("→" if hl.direction == "R" else "↓") if hl.direction else BONUS_GLYPHS.get(marker, "·")
-                        line.append(f" {glyph} ", style="bold black on bright_green")
-                    elif hl.col == c and hl.row is None:
-                        glyph = BONUS_GLYPHS.get(marker, "·")
-                        line.append(f" {glyph} ", style="bold bright_yellow")
-                    elif hl.row == r and hl.col is None:
-                        glyph = BONUS_GLYPHS.get(marker, "·")
-                        line.append(f" {glyph} ", style="bold bright_yellow")
-                    else:
-                        glyph = BONUS_GLYPHS.get(marker, "·")
-                        style = BONUS_STYLES.get(marker, "grey50")
-                        line.append(f" {glyph} ", style=style)
-            yield line
 
     def play_move(self, move: Move) -> bool:
         """Write the word into the grid at coords along move.dir."""

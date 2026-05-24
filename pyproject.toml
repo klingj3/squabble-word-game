@@ -3,11 +3,28 @@ name = "python-squabble"
 version = "0.1.0"
 description = "Command-line SQUABBLE — a familiar-seeming but legally distinct word game"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "John Klingelhofer", email = "jkklingelhofer@gmail.com" }]
+keywords = ["word game", "cli", "terminal", "board game"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Topic :: Games/Entertainment :: Board Games",
+    "Intended Audience :: End Users/Desktop",
+]
 requires-python = ">=3.12"
 dependencies = [
     "rich>=13.7.0",
     "python-dotenv>=1.0.0",
+    "aiohttp>=3.13.5",
 ]
+
+[project.urls]
+Homepage = "https://github.com/klingj3/squabble-word-game"
+Repository = "https://github.com/klingj3/squabble-word-game"
+Issues = "https://github.com/klingj3/squabble-word-game/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -28,14 +45,19 @@ packages = ["game"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: tests that make real network calls (run with --run-integration)",
+]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+implicit_reexport = true
 packages = ["game"]
 
 [[tool.mypy.overrides]]
 module = "dotenv.*"
 ignore_missing_imports = true
+

@@ -48,6 +48,50 @@ class TestHumanPlayerTilesPresent(TestCase):
         self.assertTrue(p._tiles_present(move, board))
 
 
+class TestHumanPlayerValidation(TestCase):
+    """Cover the two distinct error paths added to _interpret."""
+
+    rb: ClassVar[Rulebook]
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.rb = Rulebook()
+
+    def test_disconnected_word_gives_placement_error(self) -> None:
+        """A real word played with no tile connection should fail with the placement message."""
+        board = _empty_board()
+        p = HumanPlayer(1, ["C", "A", "T", "X", "X", "X", "X"], self.rb, name="t")
+        result = p._interpret(["0", "0", "R", "cat"], board)
+        self.assertEqual(
+            result,
+            "Your word must connect to an existing tile (or the center square on the first move).",
+        )
+
+    def test_connected_invalid_word_gives_word_error(self) -> None:
+        """A nonsense word played adjacent to existing tiles gives the dictionary message."""
+        board = _empty_board()
+        board[7] = "       AB      "  # A at (7,7), B at (7,8)
+        # "ZXQV" going down col 9 from row 6 — (7,9) is adjacent to B, so placement is valid
+        p = HumanPlayer(1, ["Z", "X", "Q", "V", "X", "X", "X"], self.rb, name="t")
+        result = p._interpret(["9", "6", "D", "ZXQV"], board)
+        self.assertEqual(
+            result,
+            "That word, or a word it forms on the board, isn't in the dictionary.",
+        )
+
+    def test_valid_word_forming_invalid_cross_gives_word_error(self) -> None:
+        """A valid main word that creates an invalid cross-word gives the dictionary message."""
+        board = _empty_board()
+        board[7] = "       AB      "  # A at (7,7), B at (7,8)
+        # "IT" going down col 9 from row 6: main word is valid, but cross-word "ABT" is not
+        p = HumanPlayer(1, ["I", "T", "X", "X", "X", "X", "X"], self.rb, name="t")
+        result = p._interpret(["9", "6", "D", "it"], board)
+        self.assertEqual(
+            result,
+            "That word, or a word it forms on the board, isn't in the dictionary.",
+        )
+
+
 class TestHumanPlayerExchange(TestCase):
     rb: ClassVar[Rulebook]
 
