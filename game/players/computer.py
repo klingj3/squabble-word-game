@@ -6,7 +6,7 @@ from typing import Any, NamedTuple
 
 from .. import Board
 from ..rulebook import Rulebook
-from ..types import BoardState, Move
+from ..types import SKIP_MOVE, BoardState, Move
 from .base import Player
 
 _A_ORD = ord("A")
@@ -239,7 +239,7 @@ class ComputerPlayer(Player):
             self.word_hist.append(best.word)
             self.score_hist.append(move_scores[0][1])
             return best
-        return Move((-1, -1), "", "")
+        return SKIP_MOVE
 
     def move_heuristic(self, move: Move, board_state: BoardState) -> int:
         """Rulebook score for this move on the given board."""

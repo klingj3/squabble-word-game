@@ -1,5 +1,10 @@
 # Python command-line SQUABBLE
 
+[![PyPI version](https://img.shields.io/pypi/v/squabble-game.svg)](https://pypi.org/project/squabble-game/)
+[![Python versions](https://img.shields.io/pypi/pyversions/squabble-game.svg)](https://pypi.org/project/squabble-game/)
+[![License](https://img.shields.io/pypi/l/squabble-game.svg)](https://pypi.org/project/squabble-game/)
+[![Release](https://github.com/klingj3/squabble-word-game/actions/workflows/release.yml/badge.svg)](https://github.com/klingj3/squabble-word-game/actions/workflows/release.yml)
+
 A familiar-seeming but legally distinct word game for the terminal: local hot-seat play or computer opponents that search the move space each turn.
 
 ![Squabble demo](docs/demo.gif)

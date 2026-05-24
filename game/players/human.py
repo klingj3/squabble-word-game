@@ -15,7 +15,7 @@ from rich.text import Text
 from ..board import Board
 from ..exceptions import InvalidPlacementError, QuitGame
 from ..rulebook import INVALID_PLACEMENT, INVALID_WORD, Rulebook
-from ..types import BoardState, Move
+from ..types import EXCHANGE_COORDS, SKIP_MOVE, BoardState, Move
 from ..ui import HELP_LINES, console, help_panel, parse_input_highlight, rack_panel, render_board, warn
 from .base import Player
 
@@ -120,7 +120,7 @@ class HumanPlayer(Player):
         """Parse tokens into a Move, the string "help", or an error message."""
         if len(segments) == 1:
             if segments[0] == "skip":
-                return Move((-1, -1), "", "")
+                return SKIP_MOVE
             if segments[0] == "quit":
                 raise QuitGame()
             if segments[0] == "help":
@@ -132,8 +132,8 @@ class HumanPlayer(Player):
 
         if len(segments) == 2 and segments[0] == "exchange":
             letters = segments[1].upper()
-            if self._tiles_present(Move((-2, -2), "", letters), board_state):
-                return Move((-2, -2), "", letters)
+            if self._tiles_present(Move(EXCHANGE_COORDS, "", letters), board_state):
+                return Move(EXCHANGE_COORDS, "", letters)
             return "Tiles for this exchange are not present in your rack."
         if len(segments) == 2 and segments[0] == "define":
             return self.rulebook.define(segments[1])
@@ -174,7 +174,7 @@ class HumanPlayer(Player):
         if wlen and max(y + is_d * (wlen - 1), x + is_r * (wlen - 1)) > 14:
             return False
         for i, tile in enumerate(move.word.upper()):
-            if move.coords == (-2, -2) or board_state[y + i * is_d][x + i * is_r] == " ":
+            if move.coords == EXCHANGE_COORDS or board_state[y + i * is_d][x + i * is_r] == " ":
                 if tile not in rack and "?" in rack:
                     tile = "?"
                 try:

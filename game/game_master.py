@@ -9,6 +9,7 @@ from .exceptions import QuitGame
 from .players import ComputerPlayer, HumanPlayer
 from .rulebook import Rulebook
 from .tile_bag import TileBag
+from .types import EXCHANGE_COORDS, SKIP_COORDS
 from .ui import GamePresenter, info, show_launch_splash, success, warn
 
 
@@ -84,11 +85,11 @@ class GameMaster:
                         warn(f"[bold]{player.name}[/] ends the game. (╯°□°）╯︵ ┻━┻")
                     raise
 
-                if move.coords == (-1, -1):
+                if move.coords == SKIP_COORDS:
                     consecutive_skips += 1
                     if verbose:
                         self.presenter.announce_pass(player.name)
-                elif move.coords == (-2, -2):
+                elif move.coords == EXCHANGE_COORDS:
                     self.presenter.announce_exchange(player.name, len(move.word))
                     player.receive_tiles(self.bag.grab(len(move.word)))
                 else:

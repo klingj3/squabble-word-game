@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ..board import Board
 from ..rulebook import Rulebook
-from ..types import BoardState, Move
+from ..types import EXCHANGE_COORDS, SKIP_COORDS, BoardState, Move
 
 
 class Player:
@@ -40,7 +40,7 @@ class Player:
             """Remove tiles spent on this play or exchange from the rack."""
             coords, word, direction = move.coords, move.word, move.dir
 
-            if coords == (-2, -2):
+            if coords == EXCHANGE_COORDS:
                 for tile in move.word:
                     self.tiles.remove(tile)
             else:
@@ -54,7 +54,7 @@ class Player:
 
         move = self.get_move(board_state, board=board)
 
-        if move.coords != (-1, -1):
+        if move.coords != SKIP_COORDS:
             remove_used_tiles(move)
 
         return move
